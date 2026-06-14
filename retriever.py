@@ -1,14 +1,17 @@
 import chromadb
-from sentence_transformers import SentenceTransformer
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = chromadb.PersistentClient(path="./chroma_store")
-collection = client.get_or_create_collection("documents")
-embedder = SentenceTransformer("all-MiniLM-L6-v2")
+collection = client.get_or_create_collection(
+    "documents",
+    metadata={"hnsw:space": "cosine"}
+)
 
 def retrieve(query: str, n_results: int = 5) -> list[dict]:
-    query_embedding = embedder.encode([query]).tolist()
     results = collection.query(
-        query_embeddings=query_embedding,
+        query_texts=[query],
         n_results=n_results,
         include=["documents", "metadatas", "distances"]
     )

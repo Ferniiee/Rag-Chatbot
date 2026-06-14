@@ -1,14 +1,15 @@
 import os
 from pypdf import PdfReader
-from sentence_transformers import SentenceTransformer
 import chromadb
 from dotenv import load_dotenv
 
 load_dotenv()
 
 client = chromadb.PersistentClient(path="./chroma_store")
-collection = client.get_or_create_collection("documents")
-embedder = SentenceTransformer("all-MiniLM-L6-v2")
+collection = client.get_or_create_collection(
+    "documents",
+    metadata={"hnsw:space": "cosine"}
+)
 
 def extract_text(file_path: str) -> str:
     if file_path.endswith(".pdf"):
@@ -32,13 +33,10 @@ def ingest_file(file_path: str, filename: str) -> int:
     text = extract_text(file_path)
     print(f"  Chunking text...")
     chunks = chunk_text(text)
-    print(f"  Embedding {len(chunks)} chunks...")
-    embeddings = embedder.encode(chunks).tolist()
     ids = [f"{filename}_chunk_{i}" for i in range(len(chunks))]
     metadatas = [{"source": filename, "chunk": i} for i in range(len(chunks))]
     collection.upsert(
         documents=chunks,
-        embeddings=embeddings,
         ids=ids,
         metadatas=metadatas
     )
